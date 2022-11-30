@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken')
 const { BadRequestError }  =require('../errors')
 
 //const bcrypt = require('bcryptjs')
-const { UnauthenticatedError } = require('../../starter/errors')
+const { UnauthenticatedError } = require('../errors')
 
 const register = async (req, res) => {
     const user = await User.create({ ...req.body })
