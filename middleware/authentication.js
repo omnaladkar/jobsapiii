@@ -1,33 +1,23 @@
-const { StatusCodes } = require('http-status-codes')
-const errorHandlerMiddleware = (err, req, res, next) => {
-  let customError = {
-    // set default
-    statusCode: err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
-    msg: err.message || 'Something went wrong try again later',
-  }
+const User = require('../models/User')
+const jwt = require('jsonwebtoken')
+const { UnauthenticatedError } = require('../errors')
 
-  // if (err instanceof CustomAPIError) {
-  //   return res.status(err.statusCode).json({ msg: err.message })
-  // }
+const auth = async (req, res, next) => {
+  // check header
+  const authHeader = req.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer')) {
+    throw new UnauthenticatedError('Authentication invalid')
+  }
+  const token = authHeader.split(' ')[1]
 
-  if (err.name === 'ValidationError') {
-    customError.msg = Object.values(err.errors)
-      .map((item) => item.message)
-      .join(',')
-    customError.statusCode = 400
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    // attach the user to the job routes
+    req.user = { userId: payload.userId, name: payload.name }
+    next()
+  } catch (error) {
+    throw new UnauthenticatedError('Authentication invalid')
   }
-  if (err.code && err.code === 11000) {
-    customError.msg = `Duplicate value entered for ${Object.keys(
-      err.keyValue
-    )} field, please choose another value`
-    customError.statusCode = 400
-  }
-  if (err.name === 'CastError') {
-    customError.msg = `No item found with id : ${err.value}`
-    customError.statusCode = 404
-  }
-
-  return res.status(customError.statusCode).json({ msg: customError.msg })
 }
 
-module.exports = errorHandlerMiddleware
+module.exports = auth
